@@ -1,19 +1,29 @@
+const app = require('express')()
+const server = require('http').createServer(app)
 const cors = require('cors');
-const io = require('socket.io')(5000, {
+app.use(cors())
+const io = require('socket.io')(server, {
     cors: {
-        origin: ['http://localhost:3000']
+        origin: "*"
     }
 })
-io.use(cors())
+const PORT = process.env.PORT || 5000
+const router = require('./router')
 
-io.on('connection', async  socket => {
-    const id = await socket.handshake.query.id
+server.listen(PORT, () => {
+    console.log('server is active on port', PORT)
+})
+
+app.use(router)
+
+
+io.on('connection', socket => {
+    const id = socket.handshake.query.id
     socket.join(id)
 
 
     socket.on('send-message', ({ recipients, text }) => {
-        console.log(recipients, text)
-        recipients.foreach(recipient => {
+        recipients.forEach(recipient => {
             const newRecipients = recipients.filter(r => r !== recipient)
             newRecipients.push(id)
             socket.broadcast.to(recipient).emit('receive-message', {
@@ -22,3 +32,14 @@ io.on('connection', async  socket => {
         })
     })
 })
+
+// io.on("connection", (socket) => {
+//     console.log('what is socket: ', socket)
+//     console.log('Socket is active to be connected')
+
+//     socket.on('chat', (payload) => {
+//         console.log('what is payload: ', payload)
+//         io.emit('message', payload)
+//     })
+// });
+
